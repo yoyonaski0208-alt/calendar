@@ -1,572 +1,279 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Download, Upload, Palette } from 'lucide-react';
-
-export default function CalendarScheduleMaker() {
-  const canvasRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const holidayImageRef = useRef(null);
-
-  const [year, setYear] = useState(2025);
-  const [month, setMonth] = useState(12);
-  const [fuguoScheduleText, setFuguoScheduleText] = useState('12月12日 週五\n14:00, 16:00\n12月13日 週六\n16:00');
-  const [rendeScheduleText, setRendeScheduleText] = useState('12月22日 週一\n10:00, 16:00, 18:00\n12月23日 週二\n10:00, 12:00, 14:00, 16:00');
-  const [notes, setNotes] = useState('');
-  const [backgroundImage, setBackgroundImage] = useState(null);
-  const [holidayImage, setHolidayImage] = useState(null);
-  const [useEmoji, setUseEmoji] = useState(true);
-  const [holidayEmoji, setHolidayEmoji] = useState('🌴');
-  const [customPrimaryColor, setCustomPrimaryColor] = useState('#D4A574');
-  const [customSecondaryColor, setCustomSecondaryColor] = useState('#FFFEF7');
-  const [customAccentColor, setCustomAccentColor] = useState('#A8B5A0');
-  const [textColor, setTextColor] = useState('#000000');
-  const [holidayDays, setHolidayDays] = useState([]);
-
-  const softColors = [
-    { name: '奶茶米', color: '#D4A574' },
-    { name: '象牙白', color: '#FFFEF7' },
-    { name: '鼠尾草綠', color: '#A8B5A0' },
-    { name: '寧靜藍', color: '#87CEEB' },
-    { name: '玫瑰粉', color: '#FFB6C1' },
-    { name: '薰衣草紫', color: '#E6E6FA' },
-    { name: '淡珊瑚', color: '#FFB997' },
-    { name: '薄荷綠', color: '#98D8C8' },
-    { name: '淡黃', color: '#FFF8DC' },
-    { name: '淡桃', color: '#FFDAB9' },
-    { name: '天空藍', color: '#B0E0E6' },
-    { name: '淡紫', color: '#DDA0DD' },
-    { name: '米白', color: '#F5F5DC' },
-    { name: '淡綠', color: '#C1E1C1' },
-    { name: '杏色', color: '#FAEBD7' },
-    { name: '淺灰', color: '#D3D3D3' }
-  ];
-
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const parseSchedule = (text) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    const schedule = {};
-    let currentDate = null;
-
-    lines.forEach(line => {
-      line = line.trim();
-      const dateMatch = line.match(/(\d+)月(\d+)日/);
-      
-      if (dateMatch) {
-        const day = parseInt(dateMatch[2]);
-        currentDate = day;
-        schedule[day] = { times: [] };
-      } else if (currentDate && line.match(/\d+:\d+/)) {
-        const times = line.split(/[,,]/).map(t => t.trim()).filter(t => t);
-        schedule[currentDate].times.push(...times);
-      }
-    });
-
-    return schedule;
-  };
-
-  const getDaysInMonth = (year, month) => {
-    return new Date(year, month, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (year, month) => {
-    return new Date(year, month - 1, 1).getDay();
-  };
-
-  const toggleDay = (day) => {
-    setHolidayDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
-  };
-
-  const drawCalendar = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
-
-    ctx.fillStyle = customAccentColor;
-    ctx.fillRect(0, 0, width, height);
-
-    if (backgroundImage) {
-      ctx.globalAlpha = 0.3;
-      ctx.drawImage(backgroundImage, 0, 0, width, height);
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.fillStyle = customPrimaryColor;
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${monthNames[month - 1]} ${year}`, width / 2, 70);
-
-    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-    const calendarTop = 120;
-    const calendarHeight = height - calendarTop - 180;
-    const cellWidth = width / 7;
-    const headerHeight = 50;
-
-    ctx.fillStyle = customPrimaryColor;
-    ctx.fillRect(0, calendarTop, width, headerHeight);
-
-    ctx.fillStyle = customAccentColor;
-    ctx.font = 'bold 24px Arial';
-    weekDays.forEach((day, i) => {
-      ctx.fillText(day, (i + 0.5) * cellWidth, calendarTop + 35);
-    });
-
-    const daysInMonth = getDaysInMonth(year, month);
-    const firstDay = getFirstDayOfMonth(year, month);
-    const fuguoSchedule = parseSchedule(fuguoScheduleText);
-    const rendeSchedule = parseSchedule(rendeScheduleText);
-
-    const rows = Math.ceil((daysInMonth + firstDay) / 7);
-    const cellHeight = calendarHeight / rows;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const position = day + firstDay - 1;
-      const row = Math.floor(position / 7);
-      const col = position % 7;
-      
-      const x = col * cellWidth;
-      const y = calendarTop + headerHeight + row * cellHeight;
-
-      ctx.strokeStyle = customSecondaryColor;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, cellWidth, cellHeight);
-
-      if (col === 0 || col === 6) {
-        ctx.fillStyle = customSecondaryColor + '40';
-        ctx.fillRect(x, y, cellWidth, cellHeight);
-      }
-
-      ctx.fillStyle = textColor;
-      ctx.font = 'bold 28px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(day, x + cellWidth / 2, y + 35);
-
-      const hasFuguo = fuguoSchedule[day];
-      const hasRende = rendeSchedule[day];
-
-      if (hasFuguo) {
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = 'right';
-        ctx.fillText('復', x + cellWidth - 10, y + 30);
-      }
-
-      if (hasRende) {
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 18px Arial';
-        ctx.textAlign = 'right';
-        const offset = hasFuguo ? 30 : 10;
-        ctx.fillText('仁', x + cellWidth - offset, y + 30);
-      }
-
-      if (holidayDays.includes(day)) {
-        if (useEmoji) {
-          ctx.font = '48px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(holidayEmoji, x + cellWidth / 2, y + cellHeight / 2 + 20);
-        } else if (holidayImage) {
-          const imgSize = Math.min(cellWidth, cellHeight) * 0.4;
-          ctx.drawImage(
-            holidayImage,
-            x + (cellWidth - imgSize) / 2,
-            y + cellHeight / 2 - imgSize / 2,
-            imgSize,
-            imgSize
-          );
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月曆排程製圖工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      } else {
-        const times = [];
-        if (hasFuguo) times.push(...fuguoSchedule[day].times);
-        if (hasRende) times.push(...rendeSchedule[day].times);
-
-        if (times.length > 0) {
-          ctx.font = 'bold 24px Arial';
-          ctx.fillStyle = textColor;
-          ctx.textAlign = 'center';
-          const startY = y + 65;
-          const lineHeight = 30;
-          
-          times.forEach((time, i) => {
-            if (startY + i * lineHeight < y + cellHeight - 10) {
-              ctx.fillText(time, x + cellWidth / 2, startY + i * lineHeight);
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 100%);
+            padding: 10px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 20px;
+            font-size: 28px;
+            padding: 10px;
+        }
+        
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        @media (min-width: 1024px) {
+            .layout {
+                grid-template-columns: 400px 1fr;
             }
-          });
         }
-      }
-    }
-
-    if (notes.trim()) {
-      const notesY = calendarTop + headerHeight + rows * cellHeight + 20;
-      ctx.fillStyle = customPrimaryColor + '80';
-      ctx.fillRect(20, notesY, width - 40, height - notesY - 20);
-      
-      ctx.fillStyle = textColor;
-      ctx.font = '20px Arial';
-      ctx.textAlign = 'left';
-      
-      const noteLines = notes.split('\n');
-      noteLines.forEach((line, i) => {
-        if (notesY + 30 + i * 25 < height - 10) {
-          ctx.fillText(line, 40, notesY + 30 + i * 25);
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
         }
-      });
-    }
-  };
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    // 降低解析度以改善手機效能
-    canvas.width = 800;
-    canvas.height = 1000;
-    drawCalendar();
-  }, [year, month, fuguoScheduleText, rendeScheduleText, notes, backgroundImage, holidayImage, useEmoji, holidayEmoji, customPrimaryColor, customSecondaryColor, customAccentColor, textColor, holidayDays]);
-
-  const handleBackgroundUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          setBackgroundImage(img);
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleHolidayImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          setHolidayImage(img);
-          setUseEmoji(false);
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const [downloadedImage, setDownloadedImage] = useState(null);
-
-  const downloadImage = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    try {
-      // 使用較低的圖片品質以避免手機記憶體問題
-      const dataURL = canvas.toDataURL('image/jpeg', 0.9);
-      setDownloadedImage(dataURL);
-    } catch (error) {
-      console.error('生成圖片失敗:', error);
-      alert('生成圖片失敗，請稍後再試');
-    }
-  };
-
-  const daysInMonth = getDaysInMonth(year, month);
-  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">月曆排程製圖工具</h1>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3">月份設定</h3>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={year}
-                  onChange={(e) => setYear(parseInt(e.target.value))}
-                  className="flex-1 p-2 border rounded"
-                  placeholder="年份"
-                />
-                <input
-                  type="number"
-                  value={month}
-                  min="1"
-                  max="12"
-                  onChange={(e) => setMonth(parseInt(e.target.value))}
-                  className="w-20 p-2 border rounded"
-                  placeholder="月"
-                />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3">復國店排程資料</h3>
-              <p className="text-sm text-gray-600 mb-2">
-                格式:日期 + 星期<br/>
-                下一行:時間 (用逗號分隔)
-              </p>
-              <textarea
-                value={fuguoScheduleText}
-                onChange={(e) => setFuguoScheduleText(e.target.value)}
-                className="w-full h-48 p-3 border rounded font-mono text-sm"
-                placeholder="12月12日 週五&#10;14:00, 16:00&#10;12月13日 週六&#10;16:00"
-              />
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3">仁德店排程資料</h3>
-              <p className="text-sm text-gray-600 mb-2">
-                格式:日期 + 星期<br/>
-                下一行:時間 (用逗號分隔)
-              </p>
-              <textarea
-                value={rendeScheduleText}
-                onChange={(e) => setRendeScheduleText(e.target.value)}
-                className="w-full h-48 p-3 border rounded font-mono text-sm"
-                placeholder="12月22日 週一&#10;10:00, 16:00, 18:00&#10;12月23日 週二&#10;10:00, 12:00, 14:00, 16:00"
-              />
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3">休假日期</h3>
-              <div className="grid grid-cols-7 gap-2">
-                {daysArray.map(day => (
-                  <button
-                    key={day}
-                    onClick={() => toggleDay(day)}
-                    className={`h-10 rounded text-sm font-medium transition ${
-                      holidayDays.includes(day)
-                        ? 'bg-red-500 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                <Palette size={20} />
-                配色設定
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">主要顏色 (標題、邊框)</label>
-                  <div className="grid grid-cols-8 gap-2">
-                    {softColors.map((c) => (
-                      <button
-                        key={c.name}
-                        onClick={() => setCustomPrimaryColor(c.color)}
-                        className={`h-10 rounded border-2 transition ${
-                          customPrimaryColor === c.color ? 'border-blue-500 scale-110' : 'border-gray-300'
-                        }`}
-                        style={{ backgroundColor: c.color }}
-                        title={c.name}
-                      />
-                    ))}
-                  </div>
+        
+        .section h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #374151;
+            font-weight: 600;
+        }
+        
+        input[type="number"], input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            font-family: monospace;
+            resize: vertical;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .hint {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .day-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        
+        .day-btn {
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            background: #f3f4f6;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .day-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .day-btn.active {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .color-btn {
+            height: 35px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .color-btn.selected {
+            border-color: #3b82f6;
+            transform: scale(1.1);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        .text-color-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .text-color-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #d1d5db;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .text-color-btn.selected {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        button.action-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        button.upload-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        button.upload-btn:active {
+            background: #2563eb;
+        }
+        
+        button.generate-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button.remove-btn {
+            background: #d1d5db;
+            color: #374151;
+            margin-top: 8px;
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        canvas {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            display: block;
+        }
+        
+        .result-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-top: 15px;
+        }
+        
+        .success-message {
+            text-align: center;
+            color: #10b981;
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .instruction {
+            text-align: center;
+            color: #6b7280;
+            font-weight: 600;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .result-image {
+            width: 100%;
+            height: auto;
+            border: 3px solid #10b981;
+            border-radius: 8px;
+        }
+        
+        .tip {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .label-text {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 月曆排程製圖工具</h1>
+        
+        <div class="layout">
+            <div>
+                <div class="section">
+                    <h3>月份設定</h3>
+                    <div class="input-group">
+                        <input type="number" id="year" value="2025" placeholder="年份">
+                        <input type="number" id="month" value="12" min="1" max="12" placeholder="月" style="width: 80px;">
+                    </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">次要顏色 (格子線)</label>
-                  <div className="grid grid-cols-8 gap-2">
-                    {softColors.map((c) => (
-                      <button
-                        key={c.name}
-                        onClick={() => setCustomSecondaryColor(c.color)}
-                        className={`h-10 rounded border-2 transition ${
-                          customSecondaryColor === c.color ? 'border-blue-500 scale-110' : 'border-gray-300'
-                        }`}
-                        style={{ backgroundColor: c.color }}
-                        title={c.name}
-                      />
-                    ))}
-                  </div>
+                
+                <div class="section">
+                    <h3>復國店排程資料</h3>
+                    <p class="hint">格式：日期 + 星期<br>下一行：時間 (用逗號分隔)</p>
+                    <textarea id="fuguoSchedule" rows="5">12月12日 週五
+14:00, 16:00
+12月13日 週六
+16:00</textarea>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">背景顏色</label>
-                  <div className="grid grid-cols-8 gap-2">
-                    {softColors.map((c) => (
-                      <button
-                        key={c.name}
-                        onClick={() => setCustomAccentColor(c.color)}
-                        className={`h-10 rounded border-2 transition ${
-                          customAccentColor === c.color ? 'border-blue-500 scale-110' : 'border-gray-300'
-                        }`}
-                        style={{ backgroundColor: c.color }}
-                        title={c.name}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">文字顏色</label>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setTextColor('#000000')}
-                      className={`flex-1 h-10 rounded border-2 transition ${
-                        textColor === '#000000' ? 'border-blue-500 scale-105' : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: '#000000', color: '#FFFFFF' }}
-                    >
-                      黑色
-                    </button>
-                    <button
-                      onClick={() => setTextColor('#FFFFFF')}
-                      className={`flex-1 h-10 rounded border-2 transition ${
-                        textColor === '#FFFFFF' ? 'border-blue-500 scale-105' : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: '#FFFFFF', color: '#000000' }}
-                    >
-                      白色
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                <Upload size={20} />
-                背景圖片
-              </h3>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleBackgroundUpload}
-                accept="image/*"
-                className="hidden"
-              />
-              <button
-                onClick={() => fileInputRef.current.click()}
-                className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                上傳背景圖
-              </button>
-              {backgroundImage && (
-                <button
-                  onClick={() => setBackgroundImage(null)}
-                  className="w-full mt-2 p-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  移除背景
-                </button>
-              )}
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3">休假標記樣式</h3>
-              <div className="space-y-3">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={useEmoji}
-                    onChange={() => setUseEmoji(true)}
-                  />
-                  使用 Emoji
-                </label>
-                {useEmoji && (
-                  <input
-                    type="text"
-                    value={holidayEmoji}
-                    onChange={(e) => setHolidayEmoji(e.target.value)}
-                    className="w-full p-2 border rounded text-center text-2xl"
-                    placeholder="輸入 Emoji"
-                  />
-                )}
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={!useEmoji}
-                    onChange={() => setUseEmoji(false)}
-                  />
-                  使用圖片
-                </label>
-                {!useEmoji && (
-                  <>
-                    <input
-                      type="file"
-                      ref={holidayImageRef}
-                      onChange={handleHolidayImageUpload}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                    <button
-                      onClick={() => holidayImageRef.current.click()}
-                      className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      上傳休假圖片
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3">備註</h3>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full h-32 p-3 border rounded"
-                placeholder="在此輸入備註..."
-              />
-            </div>
-
-            <button
-              onClick={downloadImage}
-              className="w-full p-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 flex items-center justify-center gap-2"
-            >
-              <Download size={20} />
-              生成圖片
-            </button>
-
-            {downloadedImage && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="font-semibold text-lg mb-3 text-center text-green-600">✓ 圖片已生成</h3>
-                <p className="text-sm text-gray-600 mb-3 text-center font-bold">
-                  📱 長按下方圖片 → 選擇「加入照片」或「儲存圖片」
-                </p>
-                <img 
-                  src={downloadedImage} 
-                  alt="月曆圖片" 
-                  className="w-full border-2 border-green-500 rounded"
-                  style={{ maxWidth: '100%', height: 'auto' }}
-                />
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  提示：長按圖片約2秒會出現選單
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-semibold text-lg mb-3">預覽</h3>
-              <div className="overflow-auto">
-                <canvas
-                  ref={canvasRef}
-                  className="border border-gray-300 rounded max-w-full"
-                  style={{ width: '100%', height: 'auto' }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+                
+                <div class="section">
+                    <h3>仁德店排程資料</h3>
+                    <p class="hint">格式：日期 + 星期<br>下一行
