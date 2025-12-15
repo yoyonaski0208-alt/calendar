@@ -268,19 +268,13 @@
                 <div class="section">
                     <h3>復國店排程資料</h3>
                     <p class="hint">格式：日期 + 星期<br>下一行：時間 (用逗號分隔)</p>
-                    <textarea id="fuguoSchedule" rows="5">12月12日 週五
-14:00, 16:00
-12月13日 週六
-16:00</textarea>
+                
                 </div>
                 
                 <div class="section">
                     <h3>仁德店排程資料</h3>
                     <p class="hint">格式：日期 + 星期<br>下一行：時間 (用逗號分隔)</p>
-                    <textarea id="rendeSchedule" rows="5">12月22日 週一
-10:00, 16:00, 18:00
-12月23日 週二
-10:00, 12:00, 14:00, 16:00</textarea>
+                   
                 </div>
                 
                 <div class="section">
@@ -320,7 +314,7 @@
                             <input type="radio" name="holidayType" value="emoji" checked>
                             使用 Emoji
                         </label>
-                        <input type="text" id="emojiInput" value="🌴" placeholder="輸入 Emoji" style="text-align: center; font-size: 24px; margin-bottom: 10px;">
+                        <input type="text" id="emojiInput" value="🏕️" placeholder="輸入 Emoji" style="text-align: center; font-size: 24px; margin-bottom: 20px;">
                         <label>
                             <input type="radio" name="holidayType" value="image">
                             使用圖片
@@ -359,20 +353,20 @@
     
     <script>
         const softColors = [
-            { name: '奶茶米', color: '#D4A574' },
+            { name: '黑色', color: '#272932' },
             { name: '象牙白', color: '#FFFEF7' },
             { name: '鼠尾草綠', color: '#A8B5A0' },
             { name: '寧靜藍', color: '#87CEEB' },
             { name: '玫瑰粉', color: '#FFB6C1' },
             { name: '薰衣草紫', color: '#E6E6FA' },
-            { name: '淡珊瑚', color: '#FFB997' },
+            { name: '藍色', color: '#4D71A8' },
             { name: '薄荷綠', color: '#98D8C8' },
             { name: '淡黃', color: '#FFF8DC' },
-            { name: '淡桃', color: '#FFDAB9' },
+            { name: '咖啡色', color: '#bc6c25' },
             { name: '天空藍', color: '#B0E0E6' },
-            { name: '淡紫', color: '#DDA0DD' },
+            { name: '深海藍', color: '#1d2d44' },
             { name: '米白', color: '#F5F5DC' },
-            { name: '淡綠', color: '#C1E1C1' },
+            { name: '深綠', color: '#414833' },
             { name: '杏色', color: '#FAEBD7' },
             { name: '淺灰', color: '#D3D3D3' }
         ];
@@ -574,12 +568,19 @@
                 ctx.globalAlpha = 1;
             }
             
+            // ===== 📌 標題設定區域 =====
+            // 標題顏色：state.primaryColor (從配色設定來的)
             ctx.fillStyle = state.primaryColor;
-            ctx.font = 'bold 32px Arial';
+            
+            // 標題字體大小和粗細：'bold 32px Arial'
+            // 可以改成：'bold 40px Arial' (更大) 或 'bold 24px Arial' (更小)
+            ctx.font = 'bold 40px Arial';
+            
             ctx.textAlign = 'center';
             ctx.fillText(`${monthNames[month - 1]} ${year}`, width / 2, 50);
+            // ===== 標題設定結束 =====
             
-            const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+            const weekDays = ['一', '二', '三', '四', '五', '六', '日'];
             const calendarTop = 80;
             const calendarHeight = height - calendarTop - 150;
             const cellWidth = width / 7;
@@ -589,7 +590,7 @@
             ctx.fillRect(0, calendarTop, width, headerHeight);
             
             ctx.fillStyle = state.accentColor;
-            ctx.font = 'bold 18px Arial';
+            ctx.font = 'bold 24px Arial';
             weekDays.forEach((day, i) => {
                 ctx.fillText(day, (i + 0.5) * cellWidth, calendarTop + 28);
             });
@@ -619,24 +620,31 @@
                     ctx.fillRect(x, y, cellWidth, cellHeight);
                 }
                 
+                // ===== 📌 日期數字設定區域 =====
+                // 日期數字顏色：state.textColor (黑色或白色)
                 ctx.fillStyle = state.textColor;
-                ctx.font = 'bold 20px Arial';
+                
+                // 日期數字字體大小和粗細：'bold 20px Arial'
+                // 可以改成：'bold 24px Arial' (更大) 或 'bold 16px Arial' (更小)
+                ctx.font = 'bold 24px Arial';
+                
                 ctx.textAlign = 'center';
                 ctx.fillText(day, x + cellWidth / 2, y + 28);
+                // ===== 日期數字設定結束 =====
                 
                 const hasFuguo = fuguoSchedule[day];
                 const hasRende = rendeSchedule[day];
                 
                 if (hasFuguo) {
                     ctx.fillStyle = '#000000';
-                    ctx.font = 'bold 14px Arial';
+                    ctx.font = 'bold 18px Arial';
                     ctx.textAlign = 'right';
                     ctx.fillText('復', x + cellWidth - 8, y + 24);
                 }
                 
                 if (hasRende) {
                     ctx.fillStyle = '#000000';
-                    ctx.font = 'bold 14px Arial';
+                    ctx.font = 'bold 18px Arial';
                     ctx.textAlign = 'right';
                     const offset = hasFuguo ? 24 : 8;
                     ctx.fillText('仁', x + cellWidth - offset, y + 24);
@@ -665,11 +673,21 @@
                     if (hasRende) times.push(...rendeSchedule[day].times);
                     
                     if (times.length > 0) {
-                        ctx.font = 'bold 16px Arial';
+                        // ===== 📌 時間文字設定區域 =====
+                        // 時間字體大小和粗細：'bold 16px Arial'
+                        // 可以改成：'bold 18px Arial' (更大) 或 'bold 14px Arial' (更小)
+                        ctx.font = 'bold 20px Arial';
+                        
+                        // 時間文字顏色：state.textColor
                         ctx.fillStyle = state.textColor;
+                        
                         ctx.textAlign = 'center';
                         const startY = y + 50;
-                        const lineHeight = 22;
+                        
+                        // 時間行距：22 (每個時間之間的距離)
+                        // 可以改成：25 (更寬) 或 18 (更窄)
+                        const lineHeight = 25;
+                        // ===== 時間文字設定結束 =====
                         
                         times.forEach((time, i) => {
                             if (startY + i * lineHeight < y + cellHeight - 8) {
@@ -680,22 +698,37 @@
                 }
             }
             
+            // ===== 📌 備註文字設定區域 =====
             if (notes.trim()) {
                 const notesY = calendarTop + headerHeight + rows * cellHeight + 15;
+                
+                // 備註背景顏色 (半透明)
                 ctx.fillStyle = state.primaryColor + '80';
                 ctx.fillRect(15, notesY, width - 30, height - notesY - 15);
                 
+                // 備註文字顏色：state.textColor (黑色或白色)
                 ctx.fillStyle = state.textColor;
-                ctx.font = '14px Arial';
+                
+                // 備註字體大小和粗細：'bold 20px Arial'
+                // 🔧 修改這裡來改變備註字體大小！
+                // 例如：'bold 24px Arial' (更大) 或 'bold 18px Arial' (更小)
+                // 也可以改成：'normal 20px Arial' (不粗體)
+                ctx.font = 'bold 40px Arial';
+                
                 ctx.textAlign = 'left';
                 
                 const noteLines = notes.split('\n');
+                
+                // 備註行距：28 (每行之間的距離)
+                // 🔧 修改這裡來改變行距！
+                // 例如：32 (更寬) 或 24 (更窄)
                 noteLines.forEach((line, i) => {
-                    if (notesY + 25 + i * 20 < height - 8) {
-                        ctx.fillText(line, 30, notesY + 25 + i * 20);
+                    if (notesY + 30 + i * 28 < height - 8) {
+                        ctx.fillText(line, 30, notesY + 30 + i * 28);
                     }
                 });
             }
+            // ===== 備註文字設定結束 =====
         }
         
         function generateImage() {
