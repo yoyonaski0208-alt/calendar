@@ -276,4 +276,450 @@
                 
                 <div class="section">
                     <h3>仁德店排程資料</h3>
-                    <p class="hint">格式：日期 + 星期<br>下一行
+                    <p class="hint">格式：日期 + 星期<br>下一行：時間 (用逗號分隔)</p>
+                    <textarea id="rendeSchedule" rows="5">12月22日 週一
+10:00, 16:00, 18:00
+12月23日 週二
+10:00, 12:00, 14:00, 16:00</textarea>
+                </div>
+                
+                <div class="section">
+                    <h3>休假日期</h3>
+                    <div class="day-grid" id="holidayGrid"></div>
+                </div>
+                
+                <div class="section">
+                    <h3>配色設定</h3>
+                    <label class="label-text">主要顏色 (標題、邊框)</label>
+                    <div class="color-grid" id="primaryColors"></div>
+                    
+                    <label class="label-text">次要顏色 (格子線)</label>
+                    <div class="color-grid" id="secondaryColors"></div>
+                    
+                    <label class="label-text">背景顏色</label>
+                    <div class="color-grid" id="accentColors"></div>
+                    
+                    <label class="label-text">文字顏色</label>
+                    <div class="text-color-group">
+                        <button class="text-color-btn selected" style="background: #000; color: #fff;" data-color="#000000">黑色</button>
+                        <button class="text-color-btn" style="background: #fff; color: #000; border: 2px solid #d1d5db;" data-color="#FFFFFF">白色</button>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>背景圖片</h3>
+                    <input type="file" id="bgFile" accept="image/*" style="display: none;">
+                    <button class="action-btn upload-btn" onclick="document.getElementById('bgFile').click()">📷 上傳背景圖</button>
+                    <button class="action-btn remove-btn" id="removeBg" style="display: none;" onclick="removeBackground()">✕ 移除背景</button>
+                </div>
+                
+                <div class="section">
+                    <h3>休假標記樣式</h3>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="holidayType" value="emoji" checked>
+                            使用 Emoji
+                        </label>
+                        <input type="text" id="emojiInput" value="🌴" placeholder="輸入 Emoji" style="text-align: center; font-size: 24px; margin-bottom: 10px;">
+                        <label>
+                            <input type="radio" name="holidayType" value="image">
+                            使用圖片
+                        </label>
+                        <input type="file" id="holidayFile" accept="image/*" style="display: none;">
+                        <button class="action-btn upload-btn" id="uploadHolidayBtn" style="display: none;" onclick="document.getElementById('holidayFile').click()">🖼️ 上傳休假圖片</button>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>備註</h3>
+                    <textarea id="notes" rows="3" placeholder="在此輸入備註..."></textarea>
+                </div>
+                
+                <button class="action-btn generate-btn" onclick="generateImage()">
+                    <span>⬇️</span>
+                    <span>生成圖片</span>
+                </button>
+            </div>
+            
+            <div>
+                <div class="section">
+                    <h3>預覽</h3>
+                    <canvas id="canvas"></canvas>
+                </div>
+                
+                <div class="result-section" id="resultSection" style="display: none;">
+                    <div class="success-message">✓ 圖片已生成</div>
+                    <p class="instruction">📱 長按下方圖片<br>→ 選擇「加入照片」或「儲存圖片」</p>
+                    <img id="resultImage" class="result-image" alt="月曆圖片">
+                    <p class="tip">提示：長按圖片約2秒會出現選單</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const softColors = [
+            { name: '奶茶米', color: '#D4A574' },
+            { name: '象牙白', color: '#FFFEF7' },
+            { name: '鼠尾草綠', color: '#A8B5A0' },
+            { name: '寧靜藍', color: '#87CEEB' },
+            { name: '玫瑰粉', color: '#FFB6C1' },
+            { name: '薰衣草紫', color: '#E6E6FA' },
+            { name: '淡珊瑚', color: '#FFB997' },
+            { name: '薄荷綠', color: '#98D8C8' },
+            { name: '淡黃', color: '#FFF8DC' },
+            { name: '淡桃', color: '#FFDAB9' },
+            { name: '天空藍', color: '#B0E0E6' },
+            { name: '淡紫', color: '#DDA0DD' },
+            { name: '米白', color: '#F5F5DC' },
+            { name: '淡綠', color: '#C1E1C1' },
+            { name: '杏色', color: '#FAEBD7' },
+            { name: '淺灰', color: '#D3D3D3' }
+        ];
+        
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        
+        let state = {
+            primaryColor: '#D4A574',
+            secondaryColor: '#FFFEF7',
+            accentColor: '#A8B5A0',
+            textColor: '#000000',
+            backgroundImage: null,
+            holidayImage: null,
+            holidayDays: []
+        };
+        
+        function initColorPickers() {
+            const primaryGrid = document.getElementById('primaryColors');
+            const secondaryGrid = document.getElementById('secondaryColors');
+            const accentGrid = document.getElementById('accentColors');
+            
+            softColors.forEach(c => {
+                const btn1 = document.createElement('button');
+                btn1.className = 'color-btn' + (c.color === state.primaryColor ? ' selected' : '');
+                btn1.style.backgroundColor = c.color;
+                btn1.title = c.name;
+                btn1.onclick = () => selectColor('primary', c.color);
+                primaryGrid.appendChild(btn1);
+                
+                const btn2 = document.createElement('button');
+                btn2.className = 'color-btn' + (c.color === state.secondaryColor ? ' selected' : '');
+                btn2.style.backgroundColor = c.color;
+                btn2.title = c.name;
+                btn2.onclick = () => selectColor('secondary', c.color);
+                secondaryGrid.appendChild(btn2);
+                
+                const btn3 = document.createElement('button');
+                btn3.className = 'color-btn' + (c.color === state.accentColor ? ' selected' : '');
+                btn3.style.backgroundColor = c.color;
+                btn3.title = c.name;
+                btn3.onclick = () => selectColor('accent', c.color);
+                accentGrid.appendChild(btn3);
+            });
+        }
+        
+        function selectColor(type, color) {
+            if (type === 'primary') {
+                state.primaryColor = color;
+                document.querySelectorAll('#primaryColors .color-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.style.backgroundColor === color);
+                });
+            } else if (type === 'secondary') {
+                state.secondaryColor = color;
+                document.querySelectorAll('#secondaryColors .color-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.style.backgroundColor === color);
+                });
+            } else if (type === 'accent') {
+                state.accentColor = color;
+                document.querySelectorAll('#accentColors .color-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.style.backgroundColor === color);
+                });
+            }
+            drawCalendar();
+        }
+        
+        document.querySelectorAll('.text-color-btn').forEach(btn => {
+            btn.onclick = () => {
+                state.textColor = btn.dataset.color;
+                document.querySelectorAll('.text-color-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                drawCalendar();
+            };
+        });
+        
+        function initHolidayGrid() {
+            const year = parseInt(document.getElementById('year').value);
+            const month = parseInt(document.getElementById('month').value);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const grid = document.getElementById('holidayGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'day-btn';
+                btn.textContent = i;
+                btn.onclick = () => toggleHoliday(i);
+                grid.appendChild(btn);
+            }
+        }
+        
+        function toggleHoliday(day) {
+            const idx = state.holidayDays.indexOf(day);
+            if (idx > -1) {
+                state.holidayDays.splice(idx, 1);
+            } else {
+                state.holidayDays.push(day);
+            }
+            
+            const btns = document.querySelectorAll('#holidayGrid .day-btn');
+            btns[day - 1].classList.toggle('active');
+            drawCalendar();
+        }
+        
+        document.getElementById('bgFile').onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        state.backgroundImage = img;
+                        document.getElementById('removeBg').style.display = 'block';
+                        drawCalendar();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        
+        function removeBackground() {
+            state.backgroundImage = null;
+            document.getElementById('bgFile').value = '';
+            document.getElementById('removeBg').style.display = 'none';
+            drawCalendar();
+        }
+        
+        document.getElementById('holidayFile').onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        state.holidayImage = img;
+                        drawCalendar();
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        
+        document.querySelectorAll('input[name="holidayType"]').forEach(radio => {
+            radio.onchange = function() {
+                const isEmoji = this.value === 'emoji';
+                document.getElementById('emojiInput').style.display = isEmoji ? 'block' : 'none';
+                document.getElementById('uploadHolidayBtn').style.display = isEmoji ? 'none' : 'block';
+                drawCalendar();
+            };
+        });
+        
+        function parseSchedule(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            const schedule = {};
+            let currentDate = null;
+            
+            lines.forEach(line => {
+                line = line.trim();
+                const dateMatch = line.match(/(\d+)月(\d+)日/);
+                
+                if (dateMatch) {
+                    const day = parseInt(dateMatch[2]);
+                    currentDate = day;
+                    schedule[day] = { times: [] };
+                } else if (currentDate && line.match(/\d+:\d+/)) {
+                    const times = line.split(/[,,]/).map(t => t.trim()).filter(t => t);
+                    schedule[currentDate].times.push(...times);
+                }
+            });
+            
+            return schedule;
+        }
+        
+        function drawCalendar() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 800;
+            canvas.height = 1000;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            const year = parseInt(document.getElementById('year').value);
+            const month = parseInt(document.getElementById('month').value);
+            const fuguoText = document.getElementById('fuguoSchedule').value;
+            const rendeText = document.getElementById('rendeSchedule').value;
+            const notes = document.getElementById('notes').value;
+            
+            ctx.fillStyle = state.accentColor;
+            ctx.fillRect(0, 0, width, height);
+            
+            if (state.backgroundImage) {
+                ctx.globalAlpha = 0.3;
+                ctx.drawImage(state.backgroundImage, 0, 0, width, height);
+                ctx.globalAlpha = 1;
+            }
+            
+            ctx.fillStyle = state.primaryColor;
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${monthNames[month - 1]} ${year}`, width / 2, 50);
+            
+            const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+            const calendarTop = 80;
+            const calendarHeight = height - calendarTop - 150;
+            const cellWidth = width / 7;
+            const headerHeight = 40;
+            
+            ctx.fillStyle = state.primaryColor;
+            ctx.fillRect(0, calendarTop, width, headerHeight);
+            
+            ctx.fillStyle = state.accentColor;
+            ctx.font = 'bold 18px Arial';
+            weekDays.forEach((day, i) => {
+                ctx.fillText(day, (i + 0.5) * cellWidth, calendarTop + 28);
+            });
+            
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const fuguoSchedule = parseSchedule(fuguoText);
+            const rendeSchedule = parseSchedule(rendeText);
+            
+            const rows = Math.ceil((daysInMonth + firstDay) / 7);
+            const cellHeight = calendarHeight / rows;
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const position = day + firstDay - 1;
+                const row = Math.floor(position / 7);
+                const col = position % 7;
+                
+                const x = col * cellWidth;
+                const y = calendarTop + headerHeight + row * cellHeight;
+                
+                ctx.strokeStyle = state.secondaryColor;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, cellWidth, cellHeight);
+                
+                if (col === 0 || col === 6) {
+                    ctx.fillStyle = state.secondaryColor + '40';
+                    ctx.fillRect(x, y, cellWidth, cellHeight);
+                }
+                
+                ctx.fillStyle = state.textColor;
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(day, x + cellWidth / 2, y + 28);
+                
+                const hasFuguo = fuguoSchedule[day];
+                const hasRende = rendeSchedule[day];
+                
+                if (hasFuguo) {
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'right';
+                    ctx.fillText('復', x + cellWidth - 8, y + 24);
+                }
+                
+                if (hasRende) {
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'right';
+                    const offset = hasFuguo ? 24 : 8;
+                    ctx.fillText('仁', x + cellWidth - offset, y + 24);
+                }
+                
+                if (state.holidayDays.includes(day)) {
+                    const useEmoji = document.querySelector('input[name="holidayType"]:checked').value === 'emoji';
+                    if (useEmoji) {
+                        ctx.font = '32px Arial';
+                        ctx.textAlign = 'center';
+                        const emoji = document.getElementById('emojiInput').value || '🌴';
+                        ctx.fillText(emoji, x + cellWidth / 2, y + cellHeight / 2 + 15);
+                    } else if (state.holidayImage) {
+                        const imgSize = Math.min(cellWidth, cellHeight) * 0.4;
+                        ctx.drawImage(
+                            state.holidayImage,
+                            x + (cellWidth - imgSize) / 2,
+                            y + cellHeight / 2 - imgSize / 2,
+                            imgSize,
+                            imgSize
+                        );
+                    }
+                } else {
+                    const times = [];
+                    if (hasFuguo) times.push(...fuguoSchedule[day].times);
+                    if (hasRende) times.push(...rendeSchedule[day].times);
+                    
+                    if (times.length > 0) {
+                        ctx.font = 'bold 16px Arial';
+                        ctx.fillStyle = state.textColor;
+                        ctx.textAlign = 'center';
+                        const startY = y + 50;
+                        const lineHeight = 22;
+                        
+                        times.forEach((time, i) => {
+                            if (startY + i * lineHeight < y + cellHeight - 8) {
+                                ctx.fillText(time, x + cellWidth / 2, startY + i * lineHeight);
+                            }
+                        });
+                    }
+                }
+            }
+            
+            if (notes.trim()) {
+                const notesY = calendarTop + headerHeight + rows * cellHeight + 15;
+                ctx.fillStyle = state.primaryColor + '80';
+                ctx.fillRect(15, notesY, width - 30, height - notesY - 15);
+                
+                ctx.fillStyle = state.textColor;
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'left';
+                
+                const noteLines = notes.split('\n');
+                noteLines.forEach((line, i) => {
+                    if (notesY + 25 + i * 20 < height - 8) {
+                        ctx.fillText(line, 30, notesY + 25 + i * 20);
+                    }
+                });
+            }
+        }
+        
+        function generateImage() {
+            const canvas = document.getElementById('canvas');
+            try {
+                const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+                document.getElementById('resultImage').src = dataURL;
+                document.getElementById('resultSection').style.display = 'block';
+                document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                alert('生成圖片失敗，請稍後再試');
+            }
+        }
+        
+        document.getElementById('year').oninput = () => { initHolidayGrid(); drawCalendar(); };
+        document.getElementById('month').oninput = () => { initHolidayGrid(); drawCalendar(); };
+        document.getElementById('fuguoSchedule').oninput = drawCalendar;
+        document.getElementById('rendeSchedule').oninput = drawCalendar;
+        document.getElementById('notes').oninput = drawCalendar;
+        document.getElementById('emojiInput').oninput = drawCalendar;
+        
+        initColorPickers();
+        initHolidayGrid();
+        drawCalendar();
+    </script>
+</body>
+</html>
